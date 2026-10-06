@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LogicSim - 逻辑表达式模拟器</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e' },
+                        accent: { 50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- JointJS -->
+    <link rel="stylesheet" type="text/css" href="lib/joint.css" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    
+    <!-- Dependencies -->
+    <script src="lib/jquery.min.js"></script>
+    <script src="lib/lodash.min.js"></script>
+    <script src="lib/backbone.js"></script>
+    <script src="lib/graphlib.min.js"></script>
+    <script src="lib/dagre.min.js"></script>
+    <script src="lib/joint.js"></script>
+    <script src="LogicParser.js"></script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div class="h-screen flex flex-col overflow-hidden">
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm z-50">
+            <div class="px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                    </div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+                        LogicSim
+                    </h1>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">逻辑表达式模拟器</span>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <!-- Theme Toggle -->
+                    <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="切换主题">
+                        <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </button>
+                    
+                    <!-- Help Button -->
+                    <button id="helpBtn" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="使用帮助">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Left Panel - Input & Controls -->
+            <aside class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                <!-- File Operations -->
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">文件操作</h2>
+                    <div class="flex gap-2">
+                        <label class="flex-1 cursor-pointer">
+                            <div class="flex items-center justify-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors text-sm font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                                载入
+                            </div>
+                            <input type="file" id="fileToLoad" class="hidden" accept=".json,.txt" />
+                        </label>
+                        <button id="saveBtn" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            保存
+                        </button>
+                    </div>
+                    <input type="text" id="inputFileNameToSaveAs" value="logic_circuit.json" class="mt-2 w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                </div>
+
+                <!-- Expression Input -->
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">逆波兰逻辑表达式</h2>
+                    <textarea id="ReversePol" rows="4" placeholder="输入表达式，如：a b . fe >" class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none font-mono"></textarea>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <button id="parseBtn" class="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-sm font-medium shadow-sm">
+                            解析文本
+                        </button>
+                        <button id="loadBtn" class="px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all text-sm font-medium shadow-sm">
+                            文本转图
+                        </button>
+                    </div>
+                </div>
+
+                <!-- JSON Model -->
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex-1 overflow-hidden flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">JSON 模型</h2>
+                        <div class="flex gap-1">
+                            <button id="saveGraphBtn" class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors">
+                                图转文本
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="myModel" class="flex-1 w-full px-3 py-2 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none font-mono">{
+    "nodeArray": [],
+    "linkArray": []
+}</textarea>
+                </div>
+
+                <!-- Status Bar -->
+                <div class="p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                    <p id="status" class="text-xs text-gray-600 dark:text-gray-400 truncate">就绪 - 等待输入表达式</p>
+                </div>
+            </aside>
+
+            <!-- Main Canvas Area -->
+            <main class="flex-1 relative overflow-hidden bg-gray-100 dark:bg-gray-900">
+                <!-- Mini Map -->
+                <div class="absolute top-4 right-4 z-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2">
+                    <div class="mini-map relative" style="width: 180px; height: 120px;">
+                        <div id="mini-paper" class="rounded"></div>
+                        <div id="mini-view" class="absolute border-2 border-primary-400 bg-primary-100/20 dark:bg-primary-900/20 cursor-move"></div>
+                        <div id="mini-resize" class="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize bg-primary-400 rounded-full m-[-6px]"></div>
+                    </div>
+                </div>
+
+                <!-- Zoom Controls -->
+                <div class="absolute bottom-4 right-4 z-40 flex flex-col gap-2">
+                    <button id="zoomInBtn" class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </button>
+                    <button id="zoomOutBtn" class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6" />
+                        </svg>
+                    </button>
+                    <button id="zoomResetBtn" class="w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-xs font-bold">
+                        1:1
+                    </button>
+                </div>
+
+                <!-- Canvas -->
+                <div id="paper-container" class="absolute inset-0 overflow-hidden">
+                    <div id="paper" class="absolute cursor-grab active:cursor-grabbing"></div>
+                </div>
+            </main>
+
+            <!-- Right Panel - Properties -->
+            <aside id="rightPanel" class="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden transition-all duration-300">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">元素属性</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">元素名称</label>
+                            <input type="text" id="ERName" class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">元素备注</label>
+                            <textarea id="ERMemo" rows="3" class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"></textarea>
+                        </div>
+                        <button id="changeNameBtn" class="w-full px-3 py-2 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-lg hover:from-primary-600 hover:to-accent-600 transition-all text-sm font-medium shadow-sm">
+                            保存修改
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Help Section -->
+                <div class="p-4 flex-1 overflow-auto">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">操作符说明</h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <code class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded font-mono">.</code>
+                            <span class="text-gray-600 dark:text-gray-400">逻辑与 (AND)</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <code class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded font-mono">,</code>
+                            <span class="text-gray-600 dark:text-gray-400">逻辑或 (OR)</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <code class="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded font-mono">&lt;</code>
+                            <span class="text-gray-600 dark:text-gray-400">逻辑非 (NOT)</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <code class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400 rounded font-mono">&gt;</code>
+                            <span class="text-gray-600 dark:text-gray-400">逻辑推出 (IMPLIES)</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
+                            <code class="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded font-mono">=</code>
+                            <span class="text-gray-600 dark:text-gray-400">逻辑等价 (EQUALS)</span>
+                        </div>
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+                            <p class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🆕 量词 (新增)</p>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-200 dark:border-indigo-700">
+                            <code class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 rounded font-mono">A</code>
+                            <span class="text-gray-600 dark:text-gray-400">全称量词 ∀ (FORALL)</span>
+                        </div>
+                        <div class="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded border border-indigo-200 dark:border-indigo-700">
+                            <code class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 rounded font-mono">E</code>
+                            <span class="text-gray-600 dark:text-gray-400">存在量词 ∃ (EXISTS)</span>
+                        </div>
+                    </div>
+
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-4 mb-3">示例</h3>
+                    <div class="space-y-2 text-xs">
+                        <button class="example-btn w-full text-left p-2 bg-gray-50 dark:bg-gray-700/50 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-expr="a b . fe >">
+                            <code class="text-primary-600 dark:text-primary-400">a b . fe ></code>
+                            <p class="text-gray-500 dark:text-gray-400 mt-1">a 与 b 推出 fe</p>
+                        </button>
+                        <button class="example-btn w-full text-left p-2 bg-gray-50 dark:bg-gray-700/50 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-expr="a b . fe ge > =">
+                            <code class="text-primary-600 dark:text-primary-400">a b . fe ge > =</code>
+                            <p class="text-gray-500 dark:text-gray-400 mt-1">a 与 b 等价于 fe 推出 ge</p>
+                        </button>
+                        <button class="example-btn w-full text-left p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-700" data-expr="x A y .">
+                            <code class="text-indigo-600 dark:text-indigo-400">x A y .</code>
+                            <p class="text-gray-500 dark:text-gray-400 mt-1">🆕 对所有 x，x 与 y</p>
+                        </button>
+                        <button class="example-btn w-full text-left p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-700" data-expr="x E y ,">
+                            <code class="text-indigo-600 dark:text-indigo-400">x E y ,</code>
+                            <p class="text-gray-500 dark:text-gray-400 mt-1">🆕 存在 x，x 或 y</p>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Panel Toggle -->
+            <button id="panelToggle" class="absolute right-72 top-1/2 -translate-y-1/2 z-50 w-6 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm">
+                <svg class="w-4 h-4 transition-transform" id="panelToggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="helpModalBackdrop"></div>
+        <div class="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[600px] md:max-h-[80vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h2 class="text-lg font-bold">使用帮助</h2>
+                <button id="helpModalClose" class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 overflow-auto flex-1 space-y-4 text-sm">
+                <section>
+                    <h3 class="font-semibold mb-2">基本操作</h3>
+                    <ul class="space-y-1 text-gray-600 dark:text-gray-400">
+                        <li>• 在左侧文本框输入逆波兰逻辑表达式</li>
+                        <li>• 点击「解析文本」将表达式转换为 JSON</li>
+                        <li>• 点击「文本转图」生成可视化电路图</li>
+                        <li>• 使用鼠标滚轮缩放画布，拖拽平移</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3 class="font-semibold mb-2">操作符</h3>
+                    <div class="grid grid-cols-2 gap-2 text-gray-600 dark:text-gray-400">
+                        <div><code class="text-blue-600 dark:text-blue-400">.</code> - 逻辑与 (AND)</div>
+                        <div><code class="text-green-600 dark:text-green-400">,</code> - 逻辑或 (OR)</div>
+                        <div><code class="text-red-600 dark:text-red-400">&lt;</code> - 逻辑非 (NOT)</div>
+                        <div><code class="text-purple-600 dark:text-purple-400">&gt;</code> - 推出 (IMPLIES)</div>
+                        <div><code class="text-amber-600 dark:text-amber-400">=</code> - 等价 (EQUALS)</div>
+                        <div><code class="text-indigo-600 dark:text-indigo-400">A</code> - 全称量词 ∀</div>
+                        <div><code class="text-indigo-600 dark:text-indigo-400">E</code> - 存在量词 ∃</div>
+                    </div>
+                </section>
+                <section>
+                    <h3 class="font-semibold mb-2">量词说明</h3>
+                    <p class="text-gray-600 dark:text-gray-400">
+                        <strong>全称量词 A (∀)</strong>：表示「对所有变量」成立。例如 <code>x A</code> 表示「对所有 x」。
+                    </p>
+                    <p class="text-gray-600 dark:text-gray-400 mt-1">
+                        <strong>存在量词 E (∃)</strong>：表示「存在某个变量」成立。例如 <code>x E</code> 表示「存在某个 x」。
+                    </p>
+                    <p class="text-gray-600 dark:text-gray-400 mt-2">
+                        量词可以与其他操作符组合使用，如 <code>x A y .</code> 表示「对所有 x，x 与 y 成立」。
+                    </p>
+                </section>
+                <section>
+                    <h3 class="font-semibold mb-2">快捷键</h3>
+                    <ul class="space-y-1 text-gray-600 dark:text-gray-400">
+                        <li>• <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Alt + ↑</kbd> 放大</li>
+                        <li>• <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Alt + ↓</kbd> 缩小</li>
+                        <li>• <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Alt + [</kbd> / <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Alt + ]</kbd> 切换侧边栏</li>
+                        <li>• 双击空白处取消选择</li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="ViewGen.js"></script>
+</body>
+</html>

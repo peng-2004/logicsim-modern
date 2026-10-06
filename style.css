@@ -1,0 +1,255 @@
+/* LogicSim Modern Styles */
+
+/* Base styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* JointJS Paper Styles */
+#paper {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.dark #paper {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+/* Mini Map */
+#mini-paper {
+    width: 100%;
+    height: 100%;
+    background: #e5e7eb;
+}
+
+.dark #mini-paper {
+    background: #374151;
+}
+
+/* Selection highlighting */
+.joint-highlight-stroke {
+    stroke: #3b82f6;
+    stroke-width: 3px;
+    stroke-dasharray: 5, 5;
+    animation: dash 0.5s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Textarea focus */
+textarea:focus,
+input:focus {
+    outline: none;
+}
+
+/* Button hover effects */
+button {
+    transition: all 0.2s ease;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* Gradient text */
+.bg-clip-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+/* Smooth transitions */
+* {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* Code blocks */
+code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.875em;
+}
+
+/* Kbd elements */
+kbd {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75em;
+    border: 1px solid #d1d5db;
+}
+
+.dark kbd {
+    border-color: #4b5563;
+}
+
+/* Panel transitions */
+#rightPanel {
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+#rightPanel.hidden {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    aside {
+        width: 100% !important;
+        max-width: 320px;
+    }
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Toast notifications */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.75rem 1.5rem;
+    background: #1f2937;
+    color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateX(-50%) translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* JointJS element tools */
+.joint-element .joint-tools {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.joint-element:hover .joint-tools {
+    opacity: 1;
+}
+
+.joint-link .joint-tools {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.joint-link:hover .joint-tools {
+    opacity: 1;
+}
+
+/* Custom port styles */
+.joint-port-body {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.joint-port-body:hover {
+    transform: scale(1.2);
+}
+
+/* Status indicator */
+#status {
+    transition: color 0.3s;
+}
+
+#status.error {
+    color: #ef4444;
+}
+
+#status.success {
+    color: #10b981;
+}
+
+#status.info {
+    color: #3b82f6;
+}
+
+/* Modal animations */
+.modal-enter {
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Gradient borders */
+.gradient-border {
+    position: relative;
+    background: white;
+    border-radius: 0.5rem;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 0.5rem;
+    z-index: -1;
+}
+
+.dark .gradient-border {
+    background: #1f2937;
+}
