@@ -222,95 +222,67 @@ function ModelGen(np) {
         order: []
     };
 
-    // 处理量词节点
+    // 处理量词节点（量词消除：真值表投影法，穷举可靠）
+    // ∀x.P(x) ≡ P(x=0) ∧ P(x=1)；∃x.P(x) ≡ P(x=0) ∨ P(x=1)
+    // body 的 value 为析取范式行（每行一个使表达式为真的变量赋值组合）。
+    // 对剩余自由变量的每个完整赋值，分别代入 x=0 / x=1 求值 body，
+    // 按 ∧/∨ 规则得到量化后表达式在该赋值下的真值，再收集为真行。
     if (np && typeof np === 'object' && np.Q) {
         var varName = np.V;
-        var bodyResult = ModelGen(np.B);
-        
-        if (np.Q === "A") {
-            // ∀: 全称量词 — 对变量所有赋值取 AND
-            // 展开: body(var=0) AND body(var=1)
-            var bodyWithVar = ModelGen(np.B);
-            // 找到 body 的变量顺序中是否包含 varName
-            var hasVar = bodyWithVar.order.indexOf(varName) >= 0;
-            if (!hasVar) {
-                // 变量不在 body 中，量词无作用，直接返回
-                return bodyWithVar;
-            }
-            // 通过从真值表中消除该变量来实现全称量化
-            // 对所有行取 AND（只保留两行都有的）
-            var newResult = { value: [], order: bodyWithVar.order.filter(function(x) { return x !== varName; }) };
-            var val0Rows = bodyWithVar.value.filter(function(row) { return row[varName] === "<" || row[varName] === undefined; });
-            var val1Rows = bodyWithVar.value.filter(function(row) { return row[varName] === ">" || row[varName] === undefined; });
-            
-            // AND semantics: keep only rows present in both
-            if (val0Rows.length > 0 && val1Rows.length > 0) {
-                for (var r0 of val0Rows) {
-                    for (var r1 of val1Rows) {
-                        var compatible = true;
-                        for (var v of newResult.order) {
-                            if (r0[v] !== undefined && r1[v] !== undefined && r0[v] !== r1[v]) {
-                                compatible = false;
-                                break;
-                            }
-                        }
-                        if (compatible) {
-                            var newRow = {};
-                            for (var v of newResult.order) {
-                                if (r0[v] !== undefined) newRow[v] = r0[v];
-                                else if (r1[v] !== undefined) newRow[v] = r1[v];
-                            }
-                            newRow["."] = (r0["."] === ">" && r1["."] === ">") ? ">" : "<";
-                            newResult.value.push(newRow);
-                        }
-                    }
-                }
-                if (newResult.value.length === 0) {
-                    return { value: [{ ".": "<" }], order: [] };
-                }
-            } else {
-                return { value: [{ ".": "<" }], order: [] };
-            }
-            return newResult;
+        var body = ModelGen(np.B);
+
+        // 被约束的变量在 body 中不出现，或 body 不依赖任何变量：量词无作用
+        if (body.order.indexOf(varName) < 0 || body.order.length === 0) {
+            return body;
         }
-        else if (np.Q === "E") {
-            // ∃: 存在量词 — 对变量某赋值取 OR
-            var bodyWithVar = ModelGen(np.B);
-            var hasVar = bodyWithVar.order.indexOf(varName) >= 0;
-            if (!hasVar) {
-                return bodyWithVar;
-            }
-            // OR semantics: keep rows from either assignment
-            var newResult = { value: [], order: bodyWithVar.order.filter(function(x) { return x !== varName; }) };
-            for (var row of bodyWithVar.value) {
-                var newRow = {};
-                for (var v of newResult.order) {
-                    if (row[v] !== undefined) newRow[v] = row[v];
+
+        var restOrder = body.order.filter(function (o) { return o !== varName; });
+
+        // valuation 给 varName 赋 0/1（false/true）；仅 "." 为 ">" 的行才是真值见证
+        function bodyTrueAt(valuation) {
+            for (var i = 0; i < body.value.length; i++) {
+                var row = body.value[i];
+                if (row["."] !== ">") { continue; }
+                var match = true;
+                for (var kk in row) {
+                    if (kk === ".") { continue; }
+                    if (valuation[kk] !== (row[kk] === ">")) { match = false; break; }
                 }
-                newRow["."] = row["."];
-                newResult.value.push(newRow);
+                if (match) { return true; }
             }
-            // Deduplicate
-            var seen = {};
-            var unique = [];
-            for (var row of newResult.value) {
-                var key = JSON.stringify(row);
-                if (!seen[key]) {
-                    seen[key] = true;
-                    unique.push(row);
-                }
-            }
-            newResult.value = unique;
-            if (newResult.value.length === 0) {
-                return { value: [{ ".": "<" }], order: [] };
-            }
-            // Check if all true or all false
-            var allTrue = newResult.value.every(function(r) { return r["."] === ">"; });
-            var allFalse = newResult.value.every(function(r) { return r["."] === "<"; });
-            if (allTrue) return { value: [{ ".": ">" }], order: [] };
-            if (allFalse) return { value: [{ ".": "<" }], order: [] };
-            return newResult;
+            return false;
         }
+
+        var passing = [];
+        var total = 1 << restOrder.length;
+        for (var m = 0; m < total; m++) {
+            var base = {};
+            for (var j = 0; j < restOrder.length; j++) {
+                base[restOrder[j]] = ((m >> j) & 1) === 1;
+            }
+            var v0 = {}; for (var k0 in base) { v0[k0] = base[k0]; } v0[varName] = false;
+            var v1 = {}; for (var k1 in base) { v1[k1] = base[k1]; } v1[varName] = true;
+            var f0 = bodyTrueAt(v0);
+            var f1 = bodyTrueAt(v1);
+            var pass = (np.Q === "A") ? (f0 && f1) : (f0 || f1);
+            if (pass) { passing.push(m); }
+        }
+
+        // 量化结果为常量（全真/全假）时，按原格式返回单常量行
+        if (passing.length === total) { return { value: [{ ".": ">" }], order: [] }; }
+        if (passing.length === 0) { return { value: [{ ".": "<" }], order: [] }; }
+
+        // 否则收集每个通过赋值的完整最小项（析取范式）
+        var newRows = [];
+        for (var p = 0; p < passing.length; p++) {
+            var idx = passing[p];
+            var newRow = { ".": ">" };
+            for (var q = 0; q < restOrder.length; q++) {
+                newRow[restOrder[q]] = ((idx >> q) & 1) === 1 ? ">" : "<";
+            }
+            newRows.push(newRow);
+        }
+        return { value: newRows, order: restOrder };
     }
 
     if ("string" == typeof (np)) {
